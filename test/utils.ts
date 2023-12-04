@@ -55,7 +55,7 @@ export function property<T>(arb: C.Arbitrary<T>, f: (t: T) => boolean | void) {
   let g = (t: T) => {
     try {
       return f(t);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === 'ERR_ASSERTION') {
         // See: https://github.com/dubzzz/fast-check/blob/5bde555628eff5284eaf78c8056afbdb796c312d/src/check/property/Property.generic.ts#L32
         // Property.run turns any error with stack trace into string

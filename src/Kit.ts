@@ -298,7 +298,7 @@ export function sum(nums: number[]): number {
 }
 
 export function enumNum(begin: number, end: number): number[] {
-  let a = [];
+  let a: Array<number> = [];
   while (begin <= end) {
     a.push(begin++);
   }
@@ -504,7 +504,7 @@ export namespace CharRange {
   export function toCodePoints(range: CharRangeRepr, maxCount = Infinity): number[] {
     let r1 = begin(range);
     let r2 = end(range);
-    let a = [];
+    let a: Array<number> = [];
     while (r1 <= r2 && a.length < maxCount) {
       a.push(r1++);
     }
@@ -756,7 +756,7 @@ export class Charset {
   }
 
   toCodePoints(maxCount = Infinity): number[] {
-    let a = [];
+    let a: Array<number[]> = [];
     for (let r of this.ranges) {
       let b = CharRange.toCodePoints(r, maxCount);
       maxCount -= b.length;
