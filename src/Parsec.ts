@@ -1,5 +1,6 @@
 import * as K from './Kit';
-import {Err, Result, isResultOK} from './Kit';
+import {Err, Result, isResultOK, InterU} from './Kit';
+import {$Values} from 'utility-types';
 
 /**
 Not Really Parser Combinator
@@ -24,7 +25,7 @@ export type ParseResult<A, State, UserError> = Result<A, ParseError<UserError>> 
   state: State;
 };
 
-class ParseCtx<S extends K.Stream<S[0]>, State, UserError> {
+class ParseCtx<S extends K.Stream<S>, State, UserError> {
   public position: number = 0;
   // A shared and mutable range field.
   // So we can directly convert ParseCtx to TokenCtx and avoid temp object;
@@ -52,7 +53,7 @@ export interface TokenCtx<S, State> {
   state: State;
 }
 
-export abstract class Parser<S extends K.Stream<S[0]>, A, State, UserError> {
+export abstract class Parser<S extends K.Stream<S>, A, State, UserError> {
   /**
   Map result value. Changing state in the map function is allowed, ensure yourself the parser is unrecoverable.
   (Why that? Because we don't have *REAL* immutable data type.)
@@ -132,7 +133,7 @@ export abstract class Parser<S extends K.Stream<S[0]>, A, State, UserError> {
   }
 
   slice(): Parser<S, S, State, UserError> {
-    return this.map((_, ctx) => <S>ctx.input.slice(ctx.range[0], ctx.range[1]));
+    return this.map((_, ctx) => ctx.input.slice(ctx.range[0], ctx.range[1]));
   }
 
   opt(): Optional<S, A, State, UserError> {
@@ -189,6 +190,13 @@ export abstract class Parser<S extends K.Stream<S[0]>, A, State, UserError> {
 
   betweens(left: S, right: S): Parser<S, A, State, UserError> {
     return new Seqs([new Exact<S, State, UserError>(left), this, new Exact<S, State, UserError>(right)]).at(1);
+  }
+
+  /**
+    Restricted monad bind, function f can not return Ref reference to other parsers
+  */
+  thenF<B>(f: (a: A, ctx: TokenCtx<S, State>) => Parser<S, B, State, UserError>): Parser<S, B, State, UserError> {
+    return new ThenF(this, f);
   }
 
   parse(s: S, initalState: State): ParseResult<A, State, UserError> {
@@ -249,7 +257,7 @@ export abstract class Parser<S extends K.Stream<S[0]>, A, State, UserError> {
 }
 
 export type FResult<A, UserError> = Result<A, UserError | string | true> & {consumed: number};
-export class FParser<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+export class FParser<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(
     private _f: (context: {
       readonly input: S;
@@ -282,7 +290,7 @@ export class FParser<S extends K.Stream<S[0]>, A, State, UserError> extends Pars
   }
 }
 
-class MapF<S extends K.Stream<S[0]>, A, B, State, UserError> extends Parser<S, B, State, UserError> {
+class MapF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, State, UserError> {
   private constructor(
     private _p: Parser<S, A, State, any>,
     private _f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>
@@ -290,7 +298,7 @@ class MapF<S extends K.Stream<S[0]>, A, B, State, UserError> extends Parser<S, B
     super();
   }
 
-  static compose<S extends K.Stream<S[0]>, A, B, State, UserError>(
+  static compose<S extends K.Stream<S>, A, B, State, UserError>(
     p: Parser<S, A, State, UserError>,
     f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>
   ): MapF<S, A, B, State, UserError> {
@@ -335,7 +343,7 @@ class MapF<S extends K.Stream<S[0]>, A, B, State, UserError> extends Parser<S, B
   }
 }
 
-export class StateF<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+export class StateF<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(private _p: Parser<S, A, State, UserError>, private _f: (st: State, ctx: TokenCtx<S, State>) => State) {
     super();
   }
@@ -364,7 +372,45 @@ export class StateF<S extends K.Stream<S[0]>, A, State, UserError> extends Parse
   }
 }
 
-export class Optional<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, K.Maybe<A>, State, UserError> {
+/**
+Restricted Monad bind, function f can not return Ref reference to other parsers, in this way we dont need to check LeftRecur in parsing
+*/
+export class ThenF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, State, UserError> {
+  constructor(
+    private _p: Parser<S, A, State, UserError>,
+    private _f: (a: A, st: TokenCtx<S, State>) => Parser<S, B, State, UserError>
+  ) {
+    super();
+  }
+
+  _parseWith(context: ParseCtx<S, State, UserError>): SimpleResult<B, UserError> {
+    let position = context.position;
+    let result = this._p._parseWith(context);
+    if (isResultOK(result)) {
+      let tokenCtx: TokenCtx<S, State> = context;
+      tokenCtx.range = [position, context.position];
+      let nextP = this._f(result.value, tokenCtx);
+      let nextResult = nextP._parseWith(context);
+      return nextResult;
+    }
+    return result;
+  }
+
+  _deref(): this {
+    this._p = this._p._getDeref();
+    return this;
+  }
+
+  _getFirstSet() {
+    return this._p.isNullable() ? [] : this._p._getFirstSet();
+  }
+
+  _checkNullable(): boolean {
+    return this._p.isNullable();
+  }
+}
+
+export class Optional<S extends K.Stream<S>, A, State, UserError> extends Parser<S, K.Maybe<A>, State, UserError> {
   constructor(private _p: Parser<S, A, State, UserError>) {
     super();
   }
@@ -392,7 +438,7 @@ export class Optional<S extends K.Stream<S[0]>, A, State, UserError> extends Par
   }
 }
 
-export class TryParser<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+export class TryParser<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(private _p: Parser<S, A, State, UserError>) {
     super();
   }
@@ -420,7 +466,7 @@ export class TryParser<S extends K.Stream<S[0]>, A, State, UserError> extends Pa
   }
 }
 
-export class Lookahead<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+export class Lookahead<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(
     private _p: Parser<S, A, State, UserError>,
     private _look: Parser<S, any, State, UserError>,
@@ -460,7 +506,7 @@ export class Lookahead<S extends K.Stream<S[0]>, A, State, UserError> extends Pa
   }
 }
 
-export class Seqs<S extends K.Stream<S[0]>, A extends Array<any>, State, UserError> extends Parser<
+export class Seqs<S extends K.Stream<S>, A extends Array<any>, State, UserError> extends Parser<
   S,
   A,
   State,
@@ -527,7 +573,7 @@ export class Seqs<S extends K.Stream<S[0]>, A extends Array<any>, State, UserErr
   }
 }
 
-export class Alts<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+export class Alts<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(private _alts: Array<Parser<S, A, State, UserError>>) {
     super();
     if (!_alts.length) throw new Error('Alts can not be empty');
@@ -577,7 +623,7 @@ export class Alts<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<
   }
 }
 
-export class Repeat<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A[], State, UserError> {
+export class Repeat<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A[], State, UserError> {
   constructor(private _p: Parser<S, A, State, UserError>, private _min: number = 0, private _max: number = Infinity) {
     super();
   }
@@ -659,7 +705,7 @@ class FailParser<State, UserError> extends Parser<any, never, State, UserError> 
   }
 }
 
-export class Exact<S extends K.Stream<S[0]>, State, UserError> extends Parser<S, S, State, UserError> {
+export class Exact<S extends K.Stream<S>, State, UserError> extends Parser<S, S, State, UserError> {
   constructor(private _s: S) {
     super();
     if (!_s.length) throw new Error('Exact match empty make no sense, please use Parsec.empty instead!');
@@ -877,7 +923,7 @@ class Ref extends Parser<any, any, any, any> {
   }
 }
 
-class LeftRecur<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S, A, State, UserError> {
+class LeftRecur<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
   constructor(private _p: Parser<S, A, State, UserError>) {
     super();
     if (_p.isNullable()) throw new Error('LeftRecur on nullable parser:' + _p.desc());
@@ -934,5 +980,295 @@ class LeftRecur<S extends K.Stream<S[0]>, A, State, UserError> extends Parser<S,
 
   desc() {
     return 'Recur(' + this._p.desc() + ')';
+  }
+}
+
+export interface GrammarMainDef<S extends K.Stream<S>, A, State, UserError> {
+  Main: ParserDef<S, A, State, UserError>;
+}
+
+export type RecurParserDef<S extends K.Stream<S>, A, State, UserError> = () => Parser<S, A, State, UserError>;
+export type ParserDef<S extends K.Stream<S>, A, State, UserError> =
+  | Parser<S, A, State, UserError>
+  | RecurParserDef<S, A, State, UserError>;
+
+export type ParserUndef<F> = F extends (() => infer P) ? P : F extends Parser<any, any, any, any> ? F : never;
+
+export type FilterParserField<T> = {
+  [K in keyof T]: T[K] extends Function | Parser<any, any, any, any> ? K : never;
+}[keyof T];
+
+export type GrammarRuleMap<T> = {
+  [K in FilterParserField<T>]: ParserUndef<T[K]>; // Distribute to ParserUndef
+};
+
+export type GrammarDefTypes<T> = $Values<GrammarRuleMap<T>> extends Parser<
+  infer Stream,
+  infer Result,
+  infer State,
+  infer UserError
+>
+  ? [Stream, Result, State, UserError]
+  : never;
+
+interface AnyParserDefMap {
+  [refName: string]: ParserDef<any, any, any, any>;
+}
+
+const _objectPrototypePropertyNames = new Set(Object.getOwnPropertyNames(Object.prototype));
+/**
+ * Get object all available property names,include its prototype chain but exclude top Object.prototype
+ */
+function getDefRuleNames(a: any): string[] {
+  let names: string[] = [];
+  let proto = a;
+  while (proto && proto !== Object.prototype) {
+    names = names.concat(Object.getOwnPropertyNames(proto));
+    proto = Object.getPrototypeOf(proto);
+  }
+  names = names.filter(n => !_objectPrototypePropertyNames.has(n));
+  return K.sortUnique(names);
+}
+
+export class Grammar<T> {
+  readonly rules: GrammarRuleMap<T>;
+  private constructor(_rawDef: T) {
+    let rawDef = (_rawDef as unknown) as AnyParserDefMap;
+
+    let ruleNames = getDefRuleNames(_rawDef).filter(k => rawDef[k] instanceof Function || rawDef[k] instanceof Parser);
+    let ruleMap: AnyParserMap = Object.create(null);
+    let thisObject: AnyParserDefMap = Object.create(null);
+    let refMap: {[ruleName: string]: Ref} = Object.create(null);
+
+    for (let k of ruleNames) {
+      let p = rawDef[k];
+      if (typeof p === 'function') {
+        refMap[k] = new Ref(k);
+        thisObject[k] = () => refMap[k];
+      } else {
+        thisObject[k] = p;
+      }
+    }
+
+    for (let k of ruleNames) {
+      let df = rawDef[k];
+      let p;
+      if (typeof df === 'function') {
+        p = df.call(thisObject);
+        if (!(p instanceof Parser)) {
+          throw new TypeError(`Grammar Definition clause "${k}" function must return Parser`);
+        }
+      } else {
+        p = df;
+      }
+
+      if (p instanceof Parser) {
+        // Allow extra utility non parser property in grammar class
+        ruleMap[k] = p;
+      }
+    }
+
+    let refNames = Object.getOwnPropertyNames(refMap);
+
+    for (let k of refNames) {
+      refMap[k].resolveRef(ruleMap);
+    }
+
+    for (let k of ruleNames) {
+      // Fix left recursion
+      let firstSet = ruleMap[k]._getFirstSet();
+      let selfRef = refMap[k];
+      if (firstSet.includes(selfRef)) {
+        ruleMap[k] = new LeftRecur(ruleMap[k]);
+      }
+    }
+
+    for (let k of refNames) {
+      refMap[k].resolveRef(ruleMap);
+    }
+
+    for (let k of ruleNames) {
+      ruleMap[k] = ruleMap[k]._getDeref();
+    }
+
+    this.rules = <any>ruleMap;
+  }
+
+  parseWithState: T extends GrammarMainDef<infer S, infer A, infer State, infer UserError>
+    ? (s: S, initalState: State) => ParseResult<A, State, UserError>
+    : never = ((s: any, initalState: any = null) => {
+    let rules = this.rules as any;
+    if (rules.Main) {
+      return rules.Main.parse(s, initalState);
+    }
+  }) as any;
+
+  parse: T extends GrammarMainDef<infer S, infer A, null, infer UserError>
+    ? (s: S) => ParseResult<A, null, UserError>
+    : never = this.parseWithState as any;
+
+  static def<T>(rawDef: T): $Values<GrammarRuleMap<T>> extends Parser<any, any, any, any> ? Grammar<T> : never {
+    return new Grammar(rawDef as any) as any;
+  }
+}
+
+/**
+We have to pre-specify these generic types due to TypeScript lacks of value polymorphism
+*/
+export function refine<S extends K.Stream<S>, State, UserError>() {
+  const spaces = re(/\s*/);
+
+  /**
+  Parse by a custom function, it must return a consumed number in order to increase the position
+  */
+  function parseBy<A, _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    f: (context: {readonly input: _S; readonly position: number; readonly state: St}) => FResult<A, UErr>
+  ) {
+    return new FParser(f);
+  }
+
+  function getState<St = State, UErr = UserError>(): Parser<any, St, St, UErr> {
+    return parseBy(ctx => ({value: ctx.state, consumed: 0}));
+  }
+
+  function re<St = State, UErr = UserError>(re: RegExp): MatchRegex<St, UErr> {
+    return new MatchRegex(re);
+  }
+
+  return {
+    seqs,
+    alts,
+    bind,
+    re,
+    parseBy,
+    getState,
+    empty: new Empty<State, UserError>(),
+    eof: new EOF<State, UserError>(),
+    digit: re(/\d/).slice(),
+    digits: re(/\d*/).slice(),
+    digits1: re(/\d+/).slice(),
+
+    hexDigit: re(/[A-F0-9]/i).slice(),
+    hexDigits: re(/[A-F0-9]*/i).slice(),
+    hexDigits1: re(/[A-F0-9]+/i).slice(),
+
+    letter: re(/[A-Z]/i).slice(),
+    letters: re(/[A-Z]*/i).slice(),
+    letters1: re(/[A-Z]+/).slice(),
+    spaces,
+    spaces1: re(/\s+/),
+
+    pure<A, St = State, UErr = UserError>(a: A): Parser<any, A, St, UErr> {
+      return parseBy(_ => ({value: a, consumed: 0}));
+    },
+
+    anyChar: new FParser<string, string, State, UserError>(ctx => {
+      let cp = ctx.input.codePointAt(ctx.position);
+      if (typeof cp === 'undefined') {
+        return {error: 'EOF', consumed: 0};
+      } else {
+        let c = String.fromCodePoint(cp);
+        return {
+          value: c,
+          consumed: c.length
+        };
+      }
+    }),
+
+    oneOf<St = State, UErr = UserError>(a: string): OneOf<St, UErr> {
+      return new OneOf(a);
+    },
+
+    noneOf<St = State, UErr = UserError>(a: string): NoneOf<St, UErr> {
+      return new NoneOf(a);
+    },
+
+    exact<_S extends K.Stream<_S> = S, St = State, UErr = UserError>(s: _S): Exact<_S, St, UErr> {
+      return new Exact(s);
+    },
+
+    charset<St = State, UErr = UserError>(ch: K.Charset): CharsetParser<St, UErr> {
+      return new CharsetParser(ch);
+    },
+
+    spaced<A, St = State, UErr = UserError>(p: Parser<string, A, St, UErr>): Parser<string, A, St, UErr> {
+      let sp = spaces as Parser<string, any, any, any>;
+      return seqs(sp, p, sp).at(1);
+    },
+
+    fails<St = State, UErr = UserError>(msg: string): Parser<any, never, St, UErr> {
+      return new FailParser(msg);
+    },
+
+    failWith<St = State, UErr = UserError>(err: UErr): Parser<any, never, St, UErr> {
+      return new FailParser('UserError', err);
+    }
+  };
+  
+  function alts(): never;
+  function alts(p: any): never;
+  function alts<A extends [any, any, ...any[]], _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...parsers: {[I in keyof A]: Parser<_S, A[I], St, UErr>}
+  ): Alts<_S, A[number], St, UErr>;
+  function alts<T, _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...parsers: Array<Parser<_S, T, St, UErr>>
+  ): Alts<_S, T, St, UErr>;
+  function alts<_S extends K.Stream<_S> = S, St = State, UErr = UserError>(...parsers: any): Alts<_S, any, St, UErr> {
+    return new Alts(parsers);
+  }
+
+  function seqs(): never;
+  function seqs(p: any): never;
+  function seqs<A extends [any, any, ...any[]], _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...parsers: {[I in keyof A]: Parser<_S, A[I], St, UErr>}
+  ): Seqs<_S, A, St, UErr>;
+  function seqs<T, _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...parsers: Array<Parser<_S, T, St, UErr>>
+  ): Seqs<_S, T[], St, UErr>;
+  function seqs<_S extends K.Stream<_S> = S, St = State, UErr = UserError>(...parsers: any): Seqs<_S, any, St, UErr> {
+    return new Seqs(parsers);
+  }
+
+  /**
+  Let bind, we had to disperse each let binding into single object literal because of JavaScript object literal does not guarentee the order of key.
+  @example
+    const P = Parsec.refine<string, 'State', 'SyntaxError'>();
+    let p: Parser<string, {name: string; value: number}, 'State', 'SyntaxError'> = P.bind(
+      {name: P.re(/[A-Z_$]\w{0,}/i).slice()},
+      {_: P.exact('=')},
+      {value: P.digits1.map(Number)}
+    );
+  */
+  function bind(): never;
+  function bind<M extends [any, ...any[]], _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...bindings: {[I in keyof M]: {[K in keyof M[I]]: Parser<_S, M[I][K], St, UErr>}}
+  ): Parser<_S, {[K in keyof InterU<M[number]>]: InterU<M[number]>[K]}, St, UErr>;
+  function bind<A, _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ...bindings: Array<{[k: string]: Parser<_S, A, St, UErr>}>
+  ): Parser<_S, {[k: string]: A}, St, UErr>;
+  function bind<_S extends K.Stream<_S> = S, St = State, UErr = UserError>(
+    ..._bindings: any
+  ): Parser<_S, any, St, UErr> {
+    let bindings = _bindings as Array<{[k: string]: Parser<_S, any, St, UErr>}>;
+
+    let {names, parsers} = bindings.reduce(
+      (prev, cur) => {
+        prev.names = prev.names.concat(Object.keys(cur));
+        prev.parsers = prev.parsers.concat(Object.values(cur));
+
+        return prev;
+      },
+      {names: [] as string[], parsers: [] as Array<Parser<_S, any, St, UErr>>}
+    );
+
+    let seq = new Seqs(parsers).map(values => {
+      let a: {[k: string]: any} = {} as any;
+      for (let i = 0; i < names.length; i++) {
+        a[names[i]] = values[i];
+      }
+      return a;
+    });
+
+    return seq;
   }
 }
