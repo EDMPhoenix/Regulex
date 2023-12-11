@@ -14,7 +14,7 @@ export const enum Ordering {
 export type Maybe<T> = T | undefined;
 
 /** Union to Intersection */
-export type InterU<U> = (U extends any ? (a: U) => 0 : never) extends ((a: infer I) => 0) ? I : never;
+export type InterU<U> = (U extends any ? (a: U) => 0 : never) extends (a: infer I) => 0 ? I : never;
 
 /**
 Transform (A => B | A => C) to (A => B|C)
@@ -93,18 +93,18 @@ export function deepEqual<T>(a: T, b: T): boolean {
   if (typeof a !== 'object' || a == null) {
     return a === b;
   }
-  if(Array.isArray(a) && Array.isArray(b)) {
+  if (Array.isArray(a) && Array.isArray(b)) {
     let l1 = a.length;
     let l2 = b.length;
-    if(l1 !== l2) return false;
-    for(let i = 0 ; i < l1 ; i++){
-      if(!deepEqual(a[i], b[i])) return false;
+    if (l1 !== l2) return false;
+    for (let i = 0; i < l1; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
     }
-  } else if(typeof (<any>a).equals === 'function') {
+  } else if (typeof (<any>a).equals === 'function') {
     return (<any>a).equals(b);
   } else {
-    for(let k in a){
-      if(!deepEqual(a[k], b[k])) return false;
+    for (let k in a) {
+      if (!deepEqual(a[k], b[k])) return false;
     }
   }
   return true;
@@ -138,14 +138,14 @@ export function bsearch<T, X>(
   x: X,
   cmp: (x: X, e: T) => Ordering,
   startIndex?: number,
-  endIndex?: number
+  endIndex?: number,
 ): BSearchResult;
 export function bsearch<T>(
   a: T[],
   x: T,
   cmp: Comparator<T> = compare,
   startIndex: number = 0,
-  endIndex: number = a.length - 1
+  endIndex: number = a.length - 1,
 ): BSearchResult {
   let result = {found: false, index: -1};
   let i = startIndex - 1;
@@ -235,7 +235,7 @@ export const Char = {
   // Max unicode code point
   MAX_CODE_POINT: CHAR_MAX_CODE_POINT,
   MIN_CHAR: chr(0),
-  MAX_CHAR: chr(CHAR_MAX_CODE_POINT)
+  MAX_CHAR: chr(CHAR_MAX_CODE_POINT),
 };
 
 /** Simple random int i, min <= i <= max. */
@@ -337,6 +337,10 @@ export function enumNum(begin: number, end: number): number[] {
     a.push(begin++);
   }
   return a;
+}
+
+export function invertMap<K, V>(m: Map<K, V>): Map<V, K> {
+  return new Map(Array.from(m).map(kv => kv.reverse() as [V, K]));
 }
 
 const _excludeSignCodePoint = 94; //ord('^');
@@ -601,13 +605,13 @@ export class Charset {
               'Charset range out of order: ' +
                 escapeNonAlphanum(String.fromCodePoint(rangeBegin, _hyphenCodePoint, rangeEnd)) +
                 ' !\n' +
-                escapeNonAlphanum(re)
+                escapeNonAlphanum(re),
             );
           }
           ranges.push(CharRange.pack(rangeBegin, rangeEnd));
         } else {
           throw new SyntaxError(
-            'Incomplete char range at ' + i + ': ' + String.fromCodePoint(...codePoints.slice(i - 2, i + 2))
+            'Incomplete char range at ' + i + ': ' + String.fromCodePoint(...codePoints.slice(i - 2, i + 2)),
           );
         }
       } else {
