@@ -24,16 +24,15 @@
     "parser",
     "Regulex"
   ],
+  "dependencies": {},
   "license": "MIT",
   "devDependencies": {
+    "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.3",
-    "@types/power-assert": "^1.5.12",
-    "assert": "^2.1.0",
-    "espower-typescript": "^10.0.1",
+    "chai": "^4.3.10",
     "fast-check": "^1.16.0",
     "mocha": "^10.2.0",
-    "power-assert": "^1.6.1",
     "prettier": "^3.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.2",
@@ -42,8 +41,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "mocha --recursive --require espower-typescript/guess test/*Spec.ts",
-    "testit": "mocha --require espower-typescript/guess",
+    "test": "mocha --inline-diffs --require ts-node/register --recursive test/**/*Spec.ts",
+    "testit": "mocha --inline-diffs --require ts-node/register",
     "format": "prettier --write \"{src, test}/**/*.{js,ts,css}\" \"./*.{js,ts,css}\"",
     "buildUnicode": "ts-node src/tools/buildUnicode.ts && npm run format && npm run build",
     "prepare": "npm run build"
