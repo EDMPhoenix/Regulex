@@ -27,9 +27,12 @@
   "dependencies": {},
   "license": "MIT",
   "devDependencies": {
+    "@types/benchmark": "^2.1.5",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.3",
+    "acorn": "^8.11.2",
+    "benchmark": "^2.1.4",
     "chai": "^4.3.10",
     "fast-check": "^1.16.0",
     "mocha": "^10.2.0",
