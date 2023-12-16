@@ -1,11 +1,9 @@
 import * as K from '../src/Kit';
 import * as C from 'fast-check';
-import * as assert from 'assert';
-
+import { assert } from 'chai';
 import Unicode from '../src/Unicode';
 import * as UnicodeProperty from '../src/UnicodeProperty';
 import {factorize, DEFAULT_UNICODE_PKG} from '../src/tools/buildUnicode';
-
 import {testProp, sampleInCharRange} from './utils';
 
 const charPairGen = () => C.tuple(C.fullUnicode(), C.fullUnicode());
