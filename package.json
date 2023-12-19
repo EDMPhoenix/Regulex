@@ -24,7 +24,11 @@
     "parser",
     "Regulex"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@types/lodash": "^4.14.202",
+    "immer": "^10.0.3",
+    "lodash": "^4.17.21"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/benchmark": "^2.1.5",
