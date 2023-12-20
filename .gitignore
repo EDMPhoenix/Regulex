@@ -7,3 +7,4 @@ test/log/
 .DS_store
 *.code-workspace
 *.swp
+docs/beta.html

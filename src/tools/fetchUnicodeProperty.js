@@ -25,8 +25,8 @@ function getUnicodeAliasMap() {
     let table = emuTable.getElementsByClassName('unicode-property-table')[0];
     let rows = Array.from(table.tBodies[0].rows);
     let mapping = {};
-    rows.forEach((tr: any) => {
-      let [cname, ...aliases] = Array.from(tr.cells[0].getElementsByTagName('code')).map((c: any) => c.innerText);
+    rows.forEach(tr => {
+      let [cname, ...aliases] = Array.from(tr.cells[0].getElementsByTagName('code')).map(c => c.innerText);
       mapping[cname] = aliases.join(',');
     });
     return mapping;
