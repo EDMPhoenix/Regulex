@@ -16,7 +16,7 @@ export function buildUnicode(outputFile: string, unicodePkg = DEFAULT_UNICODE_PK
     Binary_Property: UnicodeProperty.canonical.Binary_Property,
     General_Category: UnicodeProperty.canonical.General_Category,
     Script: UnicodeProperty.canonical.Script,
-    Script_Extensions: UnicodeProperty.canonical.Script_Extensions
+    Script_Extensions: UnicodeProperty.canonical.Script_Extensions,
   };
 
   for (let cls in unicodeProps) {
@@ -87,13 +87,7 @@ export function escapeUnsafeUnicode(s: string): string {
   return Array.from(s)
     .map(c => {
       if (unsafeUnicode.test(c)) {
-        return (
-          '\\u' +
-          c
-            .codePointAt(0)!
-            .toString(16)
-            .toUpperCase()
-        );
+        return '\\u' + c.codePointAt(0)!.toString(16).toUpperCase();
       }
       return c;
     })

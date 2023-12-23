@@ -31,10 +31,10 @@ suite
   .add('Regex', () => {
     assert(regex.test(str));
   })
-  .on('cycle', function(event: any) {
+  .on('cycle', function (event: any) {
     console.log(String(event.target));
   })
-  .on('complete', function(this: any) {
+  .on('complete', function (this: any) {
     console.log('Fastest is ' + this.filter('fastest').map('name'));
   })
   .run();

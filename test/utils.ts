@@ -48,7 +48,7 @@ function errorAsKey(err: Error): string {
 }
 
 const PG = PropertyGeneric as any;
-PG.Property.prototype.run = function(this: any, v: any): any {
+PG.Property.prototype.run = function (this: any, v: any): any {
   this.beforeEachHook();
   try {
     const output = this.predicate(v);
@@ -100,7 +100,7 @@ function _throwIfFailed<T>(out: C.RunDetails<T>) {
     let e;
     if (out.counterexample == null) {
       e = new AssertionError({
-        message: `Failed to run property, too many pre-condition failures encountered\n\nRan ${out.numRuns} time(s)\nSkipped ${out.numSkips} time(s)\n\nHint (1): Try to reduce the number of rejected values by combining map, flatMap and built-in arbitraries\nHint (2): Increase failure tolerance by setting maxSkipsPerRun to an higher value`
+        message: `Failed to run property, too many pre-condition failures encountered\n\nRan ${out.numRuns} time(s)\nSkipped ${out.numSkips} time(s)\n\nHint (1): Try to reduce the number of rejected values by combining map, flatMap and built-in arbitraries\nHint (2): Increase failure tolerance by setting maxSkipsPerRun to an higher value`,
       });
     } else {
       let originalError = FastCheckGlobalErrorMap.get(out.error as any)!;
@@ -113,7 +113,7 @@ function _throwIfFailed<T>(out: C.RunDetails<T>) {
             : `Encountered failures were:\n- ${out.failures.map(a => prettyPrint(a)).join('\n- ')}`
         }`,
         expected: originalError.expected,
-        actual: originalError.actual
+        actual: originalError.actual,
       });
       (e as any).stack = (originalError as any).stack;
     }
@@ -127,10 +127,6 @@ export function allEqual(a: any[]): boolean {
     if (a[i] !== a[0]) return false;
   }
   return true;
-}
-
-function isNumber(n: any) {
-  return Object.prototype.toString.call(n) === '[object Number]';
 }
 
 export function sampleInCharRange(range: K.CharRangeRepr, maxCount = 100): string[] {
@@ -158,4 +154,14 @@ export function sampleInCharset(charset: K.Charset, maxCount = 100): string[] {
     chars = chars.concat(s);
   }
   return chars;
+}
+
+export function genInCharset(ch: K.Charset): C.Arbitrary<string> {
+  return C.constantFrom(...ch.ranges).chain(range =>
+    C.integer(K.CharRange.begin(range), K.CharRange.end(range)).map(String.fromCodePoint),
+  );
+}
+
+function isNumber(n: any) {
+  return Object.prototype.toString.call(n) === '[object Number]';
 }

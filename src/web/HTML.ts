@@ -16,10 +16,10 @@ export const voidElementTagTuple = [
   'param',
   'source',
   'track',
-  'wbr'
+  'wbr',
 ] as const;
 
-export type VoidElementTag = typeof voidElementTagTuple[number];
+export type VoidElementTag = (typeof voidElementTagTuple)[number];
 
 export type StyleValue = {[K in WritableKeys<CSSStyleDeclaration>]?: Exclude<CSSStyleDeclaration[K], null>};
 
@@ -51,7 +51,7 @@ export const h: HTMLBuilder = {
     let a = document.createDocumentFragment();
     appends(a, children);
     return a;
-  }
+  },
 } as any;
 
 htmlTags.forEach(tag => {

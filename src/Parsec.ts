@@ -35,7 +35,10 @@ class ParseCtx<S extends K.Stream<S>, State, UserError> {
     Map<number, {position: number; state: State; result: SimpleResult<any, UserError>}>
   >;
 
-  constructor(public readonly input: S, public state: State) {
+  constructor(
+    public readonly input: S,
+    public state: State,
+  ) {
     this.recurMemo = new Map();
   }
 }
@@ -59,70 +62,58 @@ export abstract class Parser<S extends K.Stream<S>, A, State, UserError> {
   (Why that? Because we don't have *REAL* immutable data type.)
   */
   map<B>(f: (v: A, ctx: TokenCtx<S, State>) => B): Parser<S, B, State, UserError> {
-    return MapF.compose(
-      this,
-      (r, ctx) => {
-        if (isResultOK(r)) {
-          return {value: f(r.value, ctx)};
-        } else {
-          return r;
-        }
+    return MapF.compose(this, (r, ctx) => {
+      if (isResultOK(r)) {
+        return {value: f(r.value, ctx)};
+      } else {
+        return r;
       }
-    );
+    });
   }
 
   /**
   Map result function return with UserError
   */
   mapE<B>(f: (v: A, ctx: TokenCtx<S, State>) => Result<B, UserError>): Parser<S, B, State, UserError> {
-    let p: Parser<S, B, State, UserError> = MapF.compose(
-      this,
-      (r, ctx) => {
-        if (isResultOK(r)) {
-          let r2 = f(r.value, ctx);
-          if (isResultOK(r2)) {
-            return r2;
-          } else {
-            return {
-              error: {
-                position: ctx.range[0],
-                parser: p,
-                userError: r2.error
-              }
-            };
-          }
+    let p: Parser<S, B, State, UserError> = MapF.compose(this, (r, ctx) => {
+      if (isResultOK(r)) {
+        let r2 = f(r.value, ctx);
+        if (isResultOK(r2)) {
+          return r2;
         } else {
-          return r;
+          return {
+            error: {
+              position: ctx.range[0],
+              parser: p,
+              userError: r2.error,
+            },
+          };
         }
+      } else {
+        return r;
       }
-    );
+    });
 
     return p;
   }
 
   mapF<B>(
-    f: (a: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>
-    ): Parser<S, B, State, UserError> {
-    return MapF.compose(
-      this,
-      f
-    );
+    f: (a: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>,
+  ): Parser<S, B, State, UserError> {
+    return MapF.compose(this, f);
   }
 
   /**
   Map result UserError
   */
   mapError(f: (err: UserError) => UserError): Parser<S, A, State, UserError> {
-    return MapF.compose(
-      this,
-      r => {
-        if (isResultOK(r)) return r;
-        if (r.error.userError) {
-          r.error.userError = f(r.error.userError);
-        }
-        return r;
+    return MapF.compose(this, r => {
+      if (isResultOK(r)) return r;
+      if (r.error.userError) {
+        r.error.userError = f(r.error.userError);
       }
-    );
+      return r;
+    });
   }
 
   /**
@@ -168,7 +159,7 @@ export abstract class Parser<S extends K.Stream<S>, A, State, UserError> {
 
   between(
     left: Parser<S, any, State, UserError>,
-    right: Parser<S, any, State, UserError>
+    right: Parser<S, any, State, UserError>,
   ): Parser<S, A, State, UserError> {
     return new Seqs([left, this, right]).at(1);
   }
@@ -263,7 +254,7 @@ export class FParser<S extends K.Stream<S>, A, State, UserError> extends Parser<
       readonly input: S;
       readonly position: number;
       readonly state: State;
-    }) => FResult<A, UserError>
+    }) => FResult<A, UserError>,
   ) {
     super();
   }
@@ -274,8 +265,8 @@ export class FParser<S extends K.Stream<S>, A, State, UserError> extends Parser<
       let errorResult: Failed<UserError> = {
         error: {
           position: context.position,
-          parser: this
-        }
+          parser: this,
+        },
       };
       if (typeof result.error === 'string') {
         errorResult.error.message = result.error;
@@ -293,14 +284,14 @@ export class FParser<S extends K.Stream<S>, A, State, UserError> extends Parser<
 class MapF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, State, UserError> {
   private constructor(
     private _p: Parser<S, A, State, any>,
-    private _f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>
+    private _f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>,
   ) {
     super();
   }
 
   static compose<S extends K.Stream<S>, A, B, State, UserError>(
     p: Parser<S, A, State, UserError>,
-    f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>
+    f: (v: SimpleResult<A, UserError>, ctx: TokenCtx<S, State>) => SimpleResult<B, UserError>,
   ): MapF<S, A, B, State, UserError> {
     if (p instanceof MapF) {
       let g = p._f;
@@ -317,17 +308,14 @@ class MapF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, S
     return this._f(result, tokenCtx);
   }
 
-    // Unsafe, because we allowed changing state in map function
-    thenR<C>(next: Parser<S, C, State, UserError>): Parser<S, C, State, UserError> {
-      return this._p.thenR(next);
-    }
-  
-    thenL(next: Parser<S, any, State, UserError>): Parser<S, B, State, UserError> {
-      return MapF.compose(
-        this._p.thenL(next),
-        this._f
-      );
-    }  
+  // Unsafe, because we allowed changing state in map function
+  thenR<C>(next: Parser<S, C, State, UserError>): Parser<S, C, State, UserError> {
+    return this._p.thenR(next);
+  }
+
+  thenL(next: Parser<S, any, State, UserError>): Parser<S, B, State, UserError> {
+    return MapF.compose(this._p.thenL(next), this._f);
+  }
 
   _checkNullable(): boolean {
     return this._p.isNullable();
@@ -344,7 +332,10 @@ class MapF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, S
 }
 
 export class StateF<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A, State, UserError> {
-  constructor(private _p: Parser<S, A, State, UserError>, private _f: (st: State, ctx: TokenCtx<S, State>) => State) {
+  constructor(
+    private _p: Parser<S, A, State, UserError>,
+    private _f: (st: State, ctx: TokenCtx<S, State>) => State,
+  ) {
     super();
   }
 
@@ -378,7 +369,7 @@ Restricted Monad bind, function f can not return Ref reference to other parsers,
 export class ThenF<S extends K.Stream<S>, A, B, State, UserError> extends Parser<S, B, State, UserError> {
   constructor(
     private _p: Parser<S, A, State, UserError>,
-    private _f: (a: A, st: TokenCtx<S, State>) => Parser<S, B, State, UserError>
+    private _f: (a: A, st: TokenCtx<S, State>) => Parser<S, B, State, UserError>,
   ) {
     super();
   }
@@ -470,7 +461,7 @@ export class Lookahead<S extends K.Stream<S>, A, State, UserError> extends Parse
   constructor(
     private _p: Parser<S, A, State, UserError>,
     private _look: Parser<S, any, State, UserError>,
-    private _negative: boolean
+    private _negative: boolean,
   ) {
     super();
   }
@@ -624,7 +615,11 @@ export class Alts<S extends K.Stream<S>, A, State, UserError> extends Parser<S, 
 }
 
 export class Repeat<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A[], State, UserError> {
-  constructor(private _p: Parser<S, A, State, UserError>, private _min: number = 0, private _max: number = Infinity) {
+  constructor(
+    private _p: Parser<S, A, State, UserError>,
+    private _min: number = 0,
+    private _max: number = Infinity,
+  ) {
     super();
   }
 
@@ -688,7 +683,10 @@ class EOF<State, UserError> extends Empty<State, UserError> {
 }
 
 class FailParser<State, UserError> extends Parser<any, never, State, UserError> {
-  constructor(private _msg: string, private _userError?: UserError) {
+  constructor(
+    private _msg: string,
+    private _userError?: UserError,
+  ) {
     super();
   }
 
@@ -741,7 +739,7 @@ export interface RegexRepeat<State, UserError> {
 function _repeats<State, UserError>(
   this: RegexRepeat<State, UserError>,
   min = 0,
-  max = Infinity
+  max = Infinity,
 ): Parser<string, string, State, UserError> {
   let re = '(?:' + this.getRegexSource() + ')';
   let quantifier = '{' + min + ',' + (max === Infinity ? '' : max) + '}';
@@ -751,19 +749,21 @@ function _repeats<State, UserError>(
 
 function _counts<State, UserError>(
   this: RegexRepeat<State, UserError>,
-  n: number
+  n: number,
 ): Parser<string, string, State, UserError> {
   return this.repeats(n, n);
 }
 
-abstract class CharsetBase<State, UserError> extends Parser<string, string, State, UserError>
-  implements RegexRepeat<State, UserError> {
+abstract class CharsetBase<State, UserError>
+  extends Parser<string, string, State, UserError>
+  implements RegexRepeat<State, UserError>
+{
   _parseWith(context: ParseCtx<string, State, UserError>): SimpleResult<string, UserError> {
     let {position, input} = context;
     let cp = input.codePointAt(position);
     if (typeof cp === 'undefined') {
       return {
-        error: {position: position, parser: this, message: 'EOF'}
+        error: {position: position, parser: this, message: 'EOF'},
       };
     } else if (this._includeCodePoint(cp)) {
       let c = String.fromCodePoint(cp);
@@ -779,7 +779,7 @@ abstract class CharsetBase<State, UserError> extends Parser<string, string, Stat
 
   repeats: (min?: number, max?: number) => Parser<string, string, State, UserError> = _repeats;
   counts: (n: number) => Parser<string, string, State, UserError> = _counts;
-  
+
   isNullable() {
     return false;
   }
@@ -823,14 +823,7 @@ export class OneOf<State, UserError> extends CharsetBase<State, UserError> {
   }
 
   desc() {
-    return (
-      this.constructor.name +
-      `(${JSON.stringify(
-        Array.from(this._set)
-          .map(K.Char.chr)
-          .join('')
-      )})`
-    );
+    return this.constructor.name + `(${JSON.stringify(Array.from(this._set).map(K.Char.chr).join(''))})`;
   }
 }
 
@@ -838,16 +831,16 @@ export class NoneOf<State, UserError> extends OneOf<State, UserError> {
   _includeCodePoint(cp: number): boolean {
     return !this._set.has(cp);
   }
-  
+
   getRegexSource(): string {
-    return K.Charset.fromCodePoints(Array.from(this._set))
-      .inverted()
-      .toRegex().source;
+    return K.Charset.fromCodePoints(Array.from(this._set)).inverted().toRegex().source;
   }
 }
 
-export class MatchRegex<State, UserError> extends Parser<string, string[] & RegExpExecArray, State, UserError>
-  implements RegexRepeat<State, UserError> {
+export class MatchRegex<State, UserError>
+  extends Parser<string, string[] & RegExpExecArray, State, UserError>
+  implements RegexRepeat<State, UserError>
+{
   _re: RegExp;
   _rawRe: RegExp;
   constructor(re: RegExp) {
@@ -947,7 +940,7 @@ class LeftRecur<S extends K.Stream<S>, A, State, UserError> extends Parser<S, A,
     last = {
       position: position,
       state: state,
-      result: {error: {position: position, parser: this}}
+      result: {error: {position: position, parser: this}},
     };
     memoMap.set(position, last);
 
@@ -992,7 +985,7 @@ export type ParserDef<S extends K.Stream<S>, A, State, UserError> =
   | Parser<S, A, State, UserError>
   | RecurParserDef<S, A, State, UserError>;
 
-export type ParserUndef<F> = F extends (() => infer P) ? P : F extends Parser<any, any, any, any> ? F : never;
+export type ParserUndef<F> = F extends () => infer P ? P : F extends Parser<any, any, any, any> ? F : never;
 
 export type FilterParserField<T> = {
   [K in keyof T]: T[K] extends Function | Parser<any, any, any, any> ? K : never;
@@ -1033,7 +1026,7 @@ function getDefRuleNames(a: any): string[] {
 export class Grammar<T> {
   readonly rules: GrammarRuleMap<T>;
   private constructor(_rawDef: T) {
-    let rawDef = (_rawDef as unknown) as AnyParserDefMap;
+    let rawDef = _rawDef as unknown as AnyParserDefMap;
 
     let ruleNames = getDefRuleNames(_rawDef).filter(k => rawDef[k] instanceof Function || rawDef[k] instanceof Parser);
     let ruleMap: AnyParserMap = Object.create(null);
@@ -1122,7 +1115,7 @@ export function refine<S extends K.Stream<S>, State, UserError>() {
   Parse by a custom function, it must return a consumed number in order to increase the position
   */
   function parseBy<A, _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
-    f: (context: {readonly input: _S; readonly position: number; readonly state: St}) => FResult<A, UErr>
+    f: (context: {readonly input: _S; readonly position: number; readonly state: St}) => FResult<A, UErr>,
   ) {
     return new FParser(f);
   }
@@ -1170,7 +1163,7 @@ export function refine<S extends K.Stream<S>, State, UserError>() {
         let c = String.fromCodePoint(cp);
         return {
           value: c,
-          consumed: c.length
+          consumed: c.length,
         };
       }
     }),
@@ -1202,9 +1195,9 @@ export function refine<S extends K.Stream<S>, State, UserError>() {
 
     failWith<St = State, UErr = UserError>(err: UErr): Parser<any, never, St, UErr> {
       return new FailParser('UserError', err);
-    }
+    },
   };
-  
+
   function alts(): never;
   function alts(p: any): never;
   function alts<A extends [any, any, ...any[]], _S extends K.Stream<_S> = S, St = State, UErr = UserError>(
@@ -1258,7 +1251,7 @@ export function refine<S extends K.Stream<S>, State, UserError>() {
 
         return prev;
       },
-      {names: [] as string[], parsers: [] as Array<Parser<_S, any, St, UErr>>}
+      {names: [] as string[], parsers: [] as Array<Parser<_S, any, St, UErr>>},
     );
 
     let seq = new Seqs(parsers).map(values => {

@@ -29,8 +29,12 @@ Substitude Type A to B in Type Expr E recursively.
 @param InferInter  Whether infer intersection type, only works when A is TypeVar.
 */
 export type Subst<E, A, B, InferInter = false> = InferInter extends true
-  ? (E extends A & infer X ? B & (X extends A ? unknown : X) : SubstIn<E, A, B, true>)
-  : (E extends A ? B : SubstIn<E, A, B, false>);
+  ? E extends A & infer X
+    ? B & (X extends A ? unknown : X)
+    : SubstIn<E, A, B, true>
+  : E extends A
+    ? B
+    : SubstIn<E, A, B, false>;
 
 /**
 SubstIn is same as Subst except it wont replace top E.
@@ -48,12 +52,12 @@ export type SubstIn<E, A, B, InferInter = false> =
 export type SubstInRaw<E, A, B, InferInter> = E extends (...a: infer Params) => infer Ret
   ? (...a: SubstInRaw<Params, A, B, InferInter>) => Subst<Ret, A, B, InferInter>
   : E extends [any, ...any[]]
-  ? SubstRecord<E, A, B, InferInter>
-  : E extends Array<infer X>
-  ? SubstArray<X, A, B, InferInter>
-  : E extends ReadonlyArray<infer X>
-  ? SubstROArray<X, A, B, InferInter>
-  : SubstRecord<E, A, B, InferInter>;
+    ? SubstRecord<E, A, B, InferInter>
+    : E extends Array<infer X>
+      ? SubstArray<X, A, B, InferInter>
+      : E extends ReadonlyArray<infer X>
+        ? SubstROArray<X, A, B, InferInter>
+        : SubstRecord<E, A, B, InferInter>;
 
 export type SubstRecord<E, A, B, InferInter> = {[K in keyof E]: Subst<E[K], A, B, InferInter>};
 /*
@@ -105,10 +109,10 @@ export type FSubstIn<E, A, F> =
 export type FSubstInRaw<E, A, F> = E extends (...a: infer Params) => infer Ret
   ? (...a: FSubstInRaw<Params, A, F>) => FSubst<Ret, A, F>
   : E extends [any, ...any[]]
-  ? FSubstRecord<E, A, F>
-  : E extends ReadonlyArray<any>
-  ? FSubstArray<E, A, F>
-  : FSubstRecord<E, A, F>;
+    ? FSubstRecord<E, A, F>
+    : E extends ReadonlyArray<any>
+      ? FSubstArray<E, A, F>
+      : FSubstRecord<E, A, F>;
 
 export type FSubstRecord<E, A, F> = {[K in keyof E]: FSubst<E[K], A, F>};
 export type FSubstArray<E, A, F> = E extends Array<any>
