@@ -11,7 +11,7 @@ import {
   RawLexeme,
   check,
   RegexParseResult,
-  groupAssertionTypeMap
+  groupAssertionTypeMap,
 } from './Base';
 
 const P = refine<string, RegexParseState, RegexError>();
@@ -35,7 +35,7 @@ export class JSREGrammar extends BaseGrammar {
       this.Repeat(),
       this.Quantifier.mapE((a, ctx) => {
         return {error: {type: 'NothingToRepeat', range: ctx.range}} as K.Result<never, RegexError>;
-      })
+      }),
     );
   }
   Repeat(): RegexParser<AST.AtomNode | AST.RepeatNode> {
@@ -55,7 +55,7 @@ export class JSREGrammar extends BaseGrammar {
         let body = a[1];
         group.body = body;
         return asNode<AST.GroupAssertionNode>('GroupAssertion')(group, ctx);
-      })
+      }),
     );
   }
 
@@ -87,14 +87,16 @@ export class JSREGrammar extends BaseGrammar {
       P.exact('?')
         .thenR(this.GroupName)
         .opt()
-        .map(name => (name ? {type: 'Capturing' as const, index: 0, name} : {type: 'Capturing' as const, index: 0}))
+        .map(name => (name ? {type: 'Capturing' as const, index: 0, name} : {type: 'Capturing' as const, index: 0})),
     );
   }
 
   /** This loose mode lexer is not used in strict whole parsing */
   Lexer(): RegexParser<Lexeme[]> {
-    const asLexeme = (type: RawLexeme['type']) => (_: any, {range}: {range: TokenRange}) =>
-      ({type, range} as RawLexeme);
+    const asLexeme =
+      (type: RawLexeme['type']) =>
+      (_: any, {range}: {range: TokenRange}) =>
+        ({type, range}) as RawLexeme;
     let asBracket = asLexeme('CharClassBracket');
     let asParen = asLexeme('Paren');
 
@@ -118,13 +120,13 @@ export class JSREGrammar extends BaseGrammar {
               .map((_, ctx) => ({type: 'GroupBehavior' as const, range: ctx.range})),
             P.alts(...Object.keys(groupAssertionTypeMap).map(P.exact)).map((_, ctx) => ({
               type: 'GroupAssertionBehavior' as const,
-              range: ctx.range
-            }))
-          ).opt()
+              range: ctx.range,
+            })),
+          ).opt(),
         )
         .map(a => (a[1] ? [a[0], a[1]] : a[0])),
 
-      this.Quantifier.trys()
+      this.Quantifier.trys(),
     )
       .repeat()
       .map(v => {
@@ -162,7 +164,7 @@ export function parse(re: string | RegExp, flags?: AST.RegexFlags, partial = fal
   let state: RegexParseState = {
     flags,
     openPairs: [],
-    features: {legacy: {}}
+    features: {legacy: {}},
   };
 
   let result = grammar.parseWithState(re, state);
@@ -193,9 +195,9 @@ export function lex(re: string, flags: AST.RegexFlags): Lexeme[] {
       legacy: {
         octalEscape: true,
         identityEscape: true,
-        charClassEscapeInCharRange: true
-      }
-    }
+        charClassEscapeInCharRange: true,
+      },
+    },
   };
 
   let result = lexer.parse(re, state);

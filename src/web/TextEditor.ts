@@ -16,7 +16,7 @@ export interface TextEditorConfig {
 export class TextEditor extends EventEmitter<TextEditorEvents> {
   static readonly defaultConfig: TextEditorConfig = {
     multiline: false,
-    checkChangeDelay: 500
+    checkChangeDelay: 500,
   };
   public readonly ele = h.div({contentEditable: 'true', spellcheck: false});
   public readonly config: TextEditorConfig;
@@ -28,13 +28,13 @@ export class TextEditor extends EventEmitter<TextEditorEvents> {
           clear: () => {
             this.ele.removeEventListener('input', _checkChangeEvent);
             clearTimeout(this._checkChangeDelayTask);
-          }
+          },
         },
         boundary: {
           init: () => this.ele.addEventListener('keydown', _checkCaretBoundaryEvent),
-          clear: () => this.ele.removeEventListener('keydown', _checkCaretBoundaryEvent)
-        }
-      }
+          clear: () => this.ele.removeEventListener('keydown', _checkCaretBoundaryEvent),
+        },
+      },
     });
 
     this.config = Object.assign({}, TextEditor.defaultConfig, config || {});

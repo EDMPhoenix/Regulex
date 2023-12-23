@@ -6,7 +6,7 @@ function getUnicodeAliasMap() {
     NonBinary_Property: 'table-nonbinary-unicode-properties',
     Binary_Property: 'table-binary-unicode-properties',
     General_Category: 'table-unicode-general-category-values',
-    Script: 'table-unicode-script-values'
+    Script: 'table-unicode-script-values',
   };
 
   let mapping = {};

@@ -13,7 +13,7 @@ export const RawAliasData = {
   NonBinary_Property: {
     General_Category: 'gc',
     Script: 'sc',
-    Script_Extensions: 'scx'
+    Script_Extensions: 'scx',
   },
   Binary_Property: {
     ASCII: '',
@@ -67,7 +67,7 @@ export const RawAliasData = {
     Variation_Selector: 'VS',
     White_Space: 'space',
     XID_Continue: 'XIDC',
-    XID_Start: 'XIDS'
+    XID_Start: 'XIDS',
   },
   General_Category: {
     Cased_Letter: 'LC',
@@ -107,7 +107,7 @@ export const RawAliasData = {
     Symbol: 'S',
     Titlecase_Letter: 'Lt',
     Unassigned: 'Cn',
-    Uppercase_Letter: 'Lu'
+    Uppercase_Letter: 'Lu',
   },
   Script: {
     Adlam: 'Adlm',
@@ -250,8 +250,8 @@ export const RawAliasData = {
     Vai: 'Vaii',
     Warang_Citi: 'Wara',
     Yi: 'Yiii',
-    Zanabazar_Square: 'Zanb'
-  }
+    Zanabazar_Square: 'Zanb',
+  },
 };
 
 /** Map alias to canonical name */
@@ -265,7 +265,7 @@ export const canonical = {
   Binary_Property: readKeysToSet('Binary_Property'),
   General_Category: readKeysToSet('General_Category'),
   Script: scriptValues,
-  Script_Extensions: scriptValues
+  Script_Extensions: scriptValues,
 };
 
 let scriptAliases = readAliasesToSet('Script');
@@ -276,7 +276,7 @@ export const aliases = {
   Binary_Property: readAliasesToSet('Binary_Property'),
   General_Category: readAliasesToSet('General_Category'),
   Script: scriptAliases,
-  Script_Extensions: scriptAliases
+  Script_Extensions: scriptAliases,
 };
 
 function buildAliasMap() {
@@ -303,6 +303,6 @@ function readAliasesToSet<K extends keyof typeof RawAliasData>(k: K) {
   return new Set(
     Object.values((RawAliasData as RawAliasDataMap)[k])
       .map(s => s.split(','))
-      .reduce((a, b) => a.concat(b), [])
+      .reduce((a, b) => a.concat(b), []),
   );
 }

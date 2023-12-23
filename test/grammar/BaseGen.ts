@@ -69,12 +69,15 @@ export function fixStateRange<N extends AST.Node>(initialState: GenState): (t: P
 }
 
 export abstract class BaseGen {
-  constructor(public readonly flags: AST.RegexFlags, public readonly maxGroupDepth = 30) {}
+  constructor(
+    public readonly flags: AST.RegexFlags,
+    public readonly maxGroupDepth = 30,
+  ) {}
 
   Dot(state: GenState): GenNode<AST.DotNode> {
     return FC.constant({
       source: '.',
-      expect: {type: 'Dot' as const}
+      expect: {type: 'Dot' as const},
     }).map(fixStateRange(state));
   }
 
@@ -96,13 +99,13 @@ export abstract class BaseGen {
       UtilGen.ControlEscape,
       UtilGen.ControlLetter,
       UtilGen.NullChar,
-      UnicodeEscape
+      UnicodeEscape,
     )
       .chain(a => FC.constantFrom(...a))
       .map(t => {
         return {
           source: t.source,
-          expect: {type: 'Char' as const, value: t.expect}
+          expect: {type: 'Char' as const, value: t.expect},
         };
       })
       .map(fixStateRange(state));
@@ -117,7 +120,7 @@ export abstract class BaseGen {
       .map(t => {
         return {
           source: '\\' + t.source,
-          expect: {type: 'CharClassEscape' as const, charClass: t.expect}
+          expect: {type: 'CharClassEscape' as const, charClass: t.expect},
         };
       })
       .map(fixStateRange(state));
@@ -149,8 +152,8 @@ export abstract class BaseGen {
             expect: {
               type: 'CharRange' as const,
               begin: a[0].expect,
-              end: a[1].expect
-            }
+              end: a[1].expect,
+            },
           };
         })
         .map(fixStateRange(st));
@@ -159,7 +162,7 @@ export abstract class BaseGen {
 
     return FC.record({
       invert: FC.boolean(),
-      bodyFns: FC.array(genCharClassItemF)
+      bodyFns: FC.array(genCharClassItemF),
     })
       .chain(t => {
         let {invert, bodyFns} = t;
@@ -174,7 +177,7 @@ export abstract class BaseGen {
               return {
                 source: acc.source + t2.source,
                 state: t2.state,
-                expect: acc.expect.concat(t2.expect)
+                expect: acc.expect.concat(t2.expect),
               };
             });
           });
@@ -186,8 +189,8 @@ export abstract class BaseGen {
             expect: {
               type: 'CharClass' as const,
               invert,
-              body: g.expect
-            }
+              body: g.expect,
+            },
           };
         });
       })
@@ -201,7 +204,7 @@ export abstract class BaseGen {
         let a = GBase.baseAssertionTypeMap[source];
         return {
           source,
-          expect: {type: 'BaseAssertion' as const, kind: a}
+          expect: {type: 'BaseAssertion' as const, kind: a},
         };
       })
       .map(fixStateRange(state));
@@ -225,7 +228,7 @@ export abstract class BaseGen {
       .map(({source, index}) => {
         return {
           source,
-          expect: {type: 'Backref' as const, index}
+          expect: {type: 'Backref' as const, index},
         };
       })
       .map(fixStateRange(state));
@@ -233,7 +236,7 @@ export abstract class BaseGen {
 
   Expr<TA extends Array<AST.Expr['type']> = []>(
     state: GenState,
-    excludes?: TA
+    excludes?: TA,
   ): GenNode<Exclude<AST.Expr, AST.NodeOfType<TA[number]>>> {
     type A = Array<AST.Expr['type']>;
     const leafGenNames: A = ['Dot', 'Char', 'CharClassEscape', 'CharClass', 'BaseAssertion'];
@@ -273,7 +276,7 @@ export abstract class BaseGen {
             return {
               state: newState,
               source: acc.source.concat(t.source),
-              expect: acc.expect.concat(t.expect)
+              expect: acc.expect.concat(t.expect),
             };
           });
         });
@@ -288,8 +291,8 @@ export abstract class BaseGen {
           state: produce(t.state, st => void st.liveGroupsBackup.pop()),
           expect: {
             type: 'Disjunction' as const,
-            body: t.expect
-          }
+            body: t.expect,
+          },
         };
       })
       .map(fixStateRange(state));
@@ -305,7 +308,7 @@ export abstract class BaseGen {
             return {
               source: acc.source + t.source,
               state: t.state,
-              expect: acc.expect.concat(t.expect)
+              expect: acc.expect.concat(t.expect),
             };
           });
         });
@@ -323,7 +326,7 @@ export abstract class BaseGen {
     return genBody.map(({source, state: newState, expect: body}) => ({
       source,
       state: newState,
-      expect: {type: 'List' as const, body, range: [state.pos, newState.pos]}
+      expect: {type: 'List' as const, body, range: [state.pos, newState.pos]},
     }));
   }
 
@@ -358,7 +361,7 @@ export abstract class BaseGen {
           type: 'Group' as const,
           body: bodyCase.expect,
           behavior,
-          range: [state.pos, newState.pos]
+          range: [state.pos, newState.pos],
         };
 
         return {source, expect, state: newState};
@@ -369,7 +372,7 @@ export abstract class BaseGen {
   GroupAssertion(state: GenState): GenNode<AST.GroupAssertionNode> {
     let specifierGen: FC.Arbitrary<Pick<AST.GroupAssertionNode, 'look' | 'negative'>> = FC.record({
       look: FC.constantFrom('Lookahead', 'Lookbehind'),
-      negative: FC.boolean()
+      negative: FC.boolean(),
     });
     return specifierGen.chain(sp => {
       let liveGroupsBackup = state.liveGroups;
@@ -395,8 +398,8 @@ export abstract class BaseGen {
             look: sp.look,
             negative: sp.negative,
             body: bodyCase.expect,
-            range: [state.pos, newState.pos]
-          }
+            range: [state.pos, newState.pos],
+          },
         };
       });
     });
@@ -411,15 +414,15 @@ export abstract class BaseGen {
         FC.constantFrom(...baseQuantifiers),
         FC.record({
           min: FC.nat(),
-          max: FC.oneof(FC.nat(), FC.constant(Infinity))
+          max: FC.oneof(FC.nat(), FC.constant(Infinity)),
         })
           .filter(({min, max}) => min <= max)
           .map(({min, max}) => {
             let q = {type: 'Quantifier', min, max, greedy: true} as AST.QuantifierNode;
             let source = GBase.showQuantifier(q);
             return {source, expect: q};
-          })
-      )
+          }),
+      ),
     })
       .map(({greedy, test}) =>
         produce(test, t => {
@@ -427,7 +430,7 @@ export abstract class BaseGen {
           if (greedy === false) {
             t.source += '?';
           }
-        })
+        }),
       )
       .map(fixStateRange(state));
   }
@@ -441,8 +444,8 @@ export abstract class BaseGen {
           type: 'Repeat' as const,
           quantifier: q.expect,
           body: bodyCase.expect,
-          range: [state.pos, q.state.pos]
-        }
+          range: [state.pos, q.state.pos],
+        },
       }));
     });
   }
@@ -466,11 +469,11 @@ export module UtilGen {
   export const HexEscape = FC.char().map(c => ({source: K.Char.hexEscape(c), expect: c}));
   export const ControlEscape = FC.constantFrom(...'fnrtv').map(c => ({
     source: '\\' + c,
-    expect: GBase.controlEscapeMap[c]
+    expect: GBase.controlEscapeMap[c],
   }));
   export const ControlLetter = genInCharset(alpha).map(c => ({
     source: '\\c' + c,
-    expect: K.Char.ctrl(c)
+    expect: K.Char.ctrl(c),
   }));
 
   export const NullChar = FC.constant({source: '\\0', expect: '\0'});
@@ -485,26 +488,28 @@ export module UtilGen {
   export const IdentityEscape = FC.constantFrom(...(GBase.syntaxChars + '/')).map(c => ({source: '\\' + c, expect: c}));
 
   export const BaseCharClass = FC.constantFrom(
-    ...Object.entries(GBase.charClassEscapeTypeMap).map(a => ({source: a[0], expect: a[1]}))
+    ...Object.entries(GBase.charClassEscapeTypeMap).map(a => ({source: a[0], expect: a[1]})),
   );
 
   export const BinaryUnicodeCharClass: FC.Arbitrary<AST.UnicodeCharClass> = FC.constantFrom(
-    ...UnicodeProperty.canonical.Binary_Property
+    ...UnicodeProperty.canonical.Binary_Property,
   ).map(name => ({name, invert: false}));
 
   export const NonBinaryUnicodeCharClass: FC.Arbitrary<AST.UnicodeCharClass> = FC.constantFrom(
-    ...UnicodeProperty.canonical.NonBinary_Property
+    ...UnicodeProperty.canonical.NonBinary_Property,
   ).chain(name =>
-    FC.constantFrom(...K.IndexSig(UnicodeProperty.canonical)[name]).map(value => ({name, value, invert: false}))
+    FC.constantFrom(...K.IndexSig(UnicodeProperty.canonical)[name]).map(value => ({name, value, invert: false})),
   );
 
   export const UnicodeCharClass = FC.record({
     invert: FC.boolean(),
-    cat: FC.oneof(BinaryUnicodeCharClass, NonBinaryUnicodeCharClass)
+    cat: FC.oneof(BinaryUnicodeCharClass, NonBinaryUnicodeCharClass),
   })
     .map(c => produce(c.cat, a => void (a.invert = c.invert)))
     .chain(cat =>
-      FC.constantFrom(...getAliasForms(cat).map(s => ({source: (cat.invert ? 'P' : 'p') + '{' + s + '}', expect: cat})))
+      FC.constantFrom(
+        ...getAliasForms(cat).map(s => ({source: (cat.invert ? 'P' : 'p') + '{' + s + '}', expect: cat})),
+      ),
     );
 
   const invAliasMap = K.invertMap(UnicodeProperty.aliasMap);
@@ -528,12 +533,12 @@ export module UtilGen {
 
   export const ID = {
     Start: genInCharset(Unicode.Binary_Property.ID_Start),
-    Continue: genInCharset(Unicode.Binary_Property.ID_Continue)
+    Continue: genInCharset(Unicode.Binary_Property.ID_Continue),
   };
 
   export const ID16Bit = {
     Start: genInCharset(Unicode.Binary_Property.ID_Start.intersect(unicode16)),
-    Continue: genInCharset(Unicode.Binary_Property.ID_Continue.intersect(unicode16))
+    Continue: genInCharset(Unicode.Binary_Property.ID_Continue.intersect(unicode16)),
   };
 }
 
@@ -541,14 +546,14 @@ export function cleanNodeRange(node: AST.Node): void {
   AST.visit(node, {
     defaults(n) {
       n.range = [0, 0];
-    }
+    },
   });
 }
 
 export function runGrammarTest(
   title: string,
   parse: typeof JSRE.parse,
-  gen: Arbitrary<{flags: AST.RegexFlags; testCase: TestCase<AST.Node>}>
+  gen: Arbitrary<{flags: AST.RegexFlags; testCase: TestCase<AST.Node>}>,
 ) {
   let runProp = property(gen, ({testCase, flags}) => {
     let result = parse(testCase.source, flags);
@@ -587,7 +592,7 @@ export function runGrammarTest(
             ';\n' +
             'export const actual = ' +
             prettyPrint(e.actual) +
-            ';\n'
+            ';\n',
         );
         console.error('See error log:' + errorLog);
       }

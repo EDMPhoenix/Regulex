@@ -2,7 +2,7 @@ import * as Parsec from '../src/Parsec';
 import * as K from '../src/Kit';
 import * as C from 'fast-check';
 import {testProp, sampleInCharset} from './utils';
-import { assert } from 'chai';
+import {assert} from 'chai';
 import {Parser} from '../src/Parsec';
 
 type TestState = {counter: number; whole: string};
@@ -40,7 +40,7 @@ const PrimeParser = {
     return {
       parser: P.oneOf(s).repeat(),
       input: s,
-      expect: {consumed: s.length, value: Array.from(s)}
+      expect: {consumed: s.length, value: Array.from(s)},
     };
   },
   RepeatNoneOf(s: string): ParseTestCase<string[]> {
@@ -53,7 +53,7 @@ const PrimeParser = {
     return {
       parser: P.oneOf(s).counts(Array.from(s).length),
       input: s,
-      expect: {consumed: s.length, value: s}
+      expect: {consumed: s.length, value: s},
     };
   },
   CountsNoneOf(s: string) {
@@ -62,7 +62,7 @@ const PrimeParser = {
     return {
       parser: P.noneOf(s).counts(Array.from(input).length),
       input: input,
-      expect: {consumed: input.length, value: input}
+      expect: {consumed: input.length, value: input},
     };
   },
   RegexRepeat(s: string) {
@@ -88,7 +88,7 @@ const PrimeParser = {
     });
     let input = s1 + s2;
     return {parser: p, input: input, expect: {consumed: input.length, value: s2 + s1}};
-  }
+  },
 };
 
 const ComboParser = {
@@ -115,7 +115,7 @@ const ComboParser = {
     p.expect.value = p.input;
     p.parser = p.parser.slice();
     return p;
-  }
+  },
 };
 
 const UtilGen = {
@@ -124,7 +124,7 @@ const UtilGen = {
   },
   EOF() {
     return {parser: P.eof, input: '', expect: {consumed: 0, value: undefined}};
-  }
+  },
 };
 
 const Gen = {
@@ -164,7 +164,7 @@ const Gen = {
       let failP = {
         parser: p.parser.thenR(P.fails('Try End Fail')).trys(),
         input: p.input,
-        expect: p.expect
+        expect: p.expect,
       };
       return ComboParser.Alts([failP, p], 1);
     });
@@ -196,7 +196,7 @@ const Gen = {
 
       return {parser: P.bind(...parsers), input, expect: {consumed, value}};
     });
-  }
+  },
 };
 
 function testParser(title: string, gen: C.Arbitrary<ParseTestCase<any>>) {
@@ -259,7 +259,7 @@ function evalExpr(e: [number, string, number]): number {
   throw new Error('Unexpected operator:' + op);
 }
 
-describe('Parsec', function() {
+describe('Parsec', function () {
   describe('Prime', () => {
     for (let k in PrimeParser) {
       let gen = K.IndexSig(PrimeParser)[k];

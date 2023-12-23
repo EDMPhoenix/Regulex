@@ -32,14 +32,7 @@ class ArithDef extends BaseDef {
   }
 
   Factor() {
-    return P.spaced(
-      P.alts(
-        this.Expr()
-          .betweens('(', ')')
-          .map(toNode('Paren')),
-        this.Num
-      )
-    );
+    return P.spaced(P.alts(this.Expr().betweens('(', ')').map(toNode('Paren')), this.Num));
   }
   Expr(): PM.Parser<string, Node, null, null> {
     return P.alts(P.seqs(this.Expr(), this.Op, this.Factor()).map(toBinExpr), this.Factor());
@@ -72,10 +65,10 @@ suite
   .add('Arcorn', () => {
     Parser.parse(expr);
   })
-  .on('cycle', function(event: any) {
+  .on('cycle', function (event: any) {
     console.log(String(event.target));
   })
-  .on('complete', function(this: any) {
+  .on('complete', function (this: any) {
     console.log('Fastest is ' + this.filter('fastest').map('name'));
   })
   .run();

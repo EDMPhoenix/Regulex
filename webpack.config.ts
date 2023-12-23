@@ -19,13 +19,13 @@ const plugins = [
   new HtmlWebpackPlugin({
     template: path.join(WEB_SRC_PATH, 'index.html'),
     inlineSource: '.(js|css)$',
-    filename: 'beta.html'
+    filename: 'beta.html',
   }),
   new HtmlWebpackInlineSourcePlugin(),
 
   // Generate TypeScript types for css modules
   new WebpackShellPlugin({
-    onBuildStart: ['npm run cssd']
+    onBuildStart: ['npm run cssd'],
   }),
   {
     apply(compiler: webpack.Compiler) {
@@ -37,14 +37,14 @@ const plugins = [
           } catch (e) {}
         }
       });
-    }
+    },
   },
 
   new webpack.WatchIgnorePlugin([/css\.d\.ts$/]),
 
   new MiniCssExtractPlugin({
-    filename: 'main.css'
-  })
+    filename: 'main.css',
+  }),
 ];
 
 function cssModules(regex: RegExp, mode: 'local' | 'global'): webpack.RuleSetRule {
@@ -55,8 +55,8 @@ function cssModules(regex: RegExp, mode: 'local' | 'global'): webpack.RuleSetRul
       {
         loader: MiniCssExtractPlugin.loader,
         options: {
-          hmr: false
-        }
+          hmr: false,
+        },
       },
       {
         loader: 'css-loader',
@@ -64,13 +64,13 @@ function cssModules(regex: RegExp, mode: 'local' | 'global'): webpack.RuleSetRul
           modules: {
             mode: mode,
             context: WEB_SRC_PATH,
-            localIdentName: '[local]-[hash:4]'
+            localIdentName: '[local]-[hash:4]',
           },
           localsConvention: 'camelCaseOnly',
-          sourceMap: _DEV_
-        }
-      }
-    ]
+          sourceMap: _DEV_,
+        },
+      },
+    ],
   };
 }
 
@@ -80,10 +80,10 @@ if (!_DEV_) {
       assetNameRegExp: /\.css$/g,
       cssProcessor: require('cssnano'),
       cssProcessorPluginOptions: {
-        preset: ['default', {discardComments: {removeAll: true}}]
+        preset: ['default', {discardComments: {removeAll: true}}],
       },
-      canPrint: true
-    })
+      canPrint: true,
+    }),
   );
 }
 
@@ -93,7 +93,7 @@ const config: webpack.Configuration = {
   output: {
     path: WEB_OUTPUT_PATH,
     publicPath: '/',
-    filename: 'main.js'
+    filename: 'main.js',
   },
   devtool: _DEV_ ? 'inline-source-map' : false,
   module: {
@@ -101,28 +101,28 @@ const config: webpack.Configuration = {
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
+        exclude: /node_modules/,
       },
       cssModules(/\.local\.css$/, 'local'),
       cssModules(/(?<!\.local)\.css$/, 'global'),
       {
         test: /\.(png|jpg)$/,
         loader: 'url-loader',
-        include: WEB_SRC_PATH
-      }
-    ]
+        include: WEB_SRC_PATH,
+      },
+    ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js']
+    extensions: ['.tsx', '.ts', '.js'],
   },
   devServer: {
     contentBase: WEB_OUTPUT_PATH,
     compress: false,
     hot: false,
     inline: false,
-    liveReload: false
+    liveReload: false,
   } as any,
-  plugins
+  plugins,
 };
 
 export default config;

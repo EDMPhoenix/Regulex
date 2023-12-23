@@ -20,10 +20,9 @@ export type Events = string | EvtMap;
 
 type UKeyOf<T> = T extends any ? Extract<keyof T, string> : never;
 
-export type EventsMap<E extends Events> = {[K1 in Extract<E, string>]: SyntheticEvent} &
-  {
-    [K2 in UKeyOf<Extract<E, EvtMap>>]: E extends {[_ in K2]: SyntheticEvent} ? E[K2] : never;
-  };
+export type EventsMap<E extends Events> = {[K1 in Extract<E, string>]: SyntheticEvent} & {
+  [K2 in UKeyOf<Extract<E, EvtMap>>]: E extends {[_ in K2]: SyntheticEvent} ? E[K2] : never;
+};
 
 export type EventTypes<E extends Events> = keyof EventsMap<E>;
 

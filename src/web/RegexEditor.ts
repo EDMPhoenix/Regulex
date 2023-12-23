@@ -21,7 +21,7 @@ export class RegexEditor extends EventEmitter<RegexEditorEvents> {
   static readonly defaultConfig: RegexEditorConfig = {
     source: '',
     instantValidate: true,
-    syntax: 'JSRE'
+    syntax: 'JSRE',
   };
 
   private readonly _sourceEditor = new TextEditor();
@@ -32,7 +32,7 @@ export class RegexEditor extends EventEmitter<RegexEditorEvents> {
     h.div({className: css.slash}),
     this._sourceEditor.ele,
     h.div({className: css.endSlash + ' ' + css.slash}),
-    h.div({className: css.flagsInputCt}, this._flagsInput)
+    h.div({className: css.flagsInputCt}, this._flagsInput),
   );
 
   public readonly config: RegexEditorConfig;
@@ -47,9 +47,9 @@ export class RegexEditor extends EventEmitter<RegexEditorEvents> {
           clear: () => {
             sourceEditor.un('change', _onChange);
             this._flagsInput.removeEventListener('input', _onChange);
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     this.config = Object.assign({}, RegexEditor.defaultConfig, config || {});
@@ -110,7 +110,7 @@ export class RegexEditor extends EventEmitter<RegexEditorEvents> {
   public getRawText(): {source: string; flags: string} {
     return {
       source: this._sourceEditor.getTextContent(),
-      flags: this._flagsInput.value
+      flags: this._flagsInput.value,
     };
   }
 

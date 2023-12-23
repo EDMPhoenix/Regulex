@@ -64,7 +64,7 @@ export const controlEscapeMap: {[c: string]: string} = {
   n: '\n',
   r: '\r',
   t: '\t',
-  v: '\v'
+  v: '\v',
 };
 
 export const charClassEscapeTypeMap: {[c: string]: AST.BaseCharClass} = {
@@ -73,14 +73,14 @@ export const charClassEscapeTypeMap: {[c: string]: AST.BaseCharClass} = {
   d: 'Digit',
   D: 'NonDigit',
   w: 'Word',
-  W: 'NonWord'
+  W: 'NonWord',
 };
 
 export const baseAssertionTypeMap: {[k: string]: AST.BaseAssertionType} = {
   '\\b': 'WordBoundary',
   '\\B': 'NonWordBoundary',
   '^': 'Begin',
-  $: 'End'
+  $: 'End',
 };
 
 export const groupAssertionTypeMap: Record<
@@ -90,7 +90,7 @@ export const groupAssertionTypeMap: Record<
   '?=': ['Lookahead', false],
   '?!': ['Lookahead', true],
   '?<=': ['Lookbehind', false],
-  '?<!': ['Lookbehind', true]
+  '?<!': ['Lookbehind', true],
 };
 
 export const invCharClassEscapeTypeMap = K.invertRecord(charClassEscapeTypeMap);
@@ -137,16 +137,16 @@ export function showQuantifier(n: Omit<AST.QuantifierNode, 'range'>) {
 export const IDCharset = {
   ID_Start: Unicode.Binary_Property.ID_Start.union(Charset.fromChars('$_')),
   // ZWJ = \u200D; ZWNJ = \u200C
-  ID_Continue: Unicode.Binary_Property.ID_Continue.union(Charset.fromChars('$_\u200C\u200D'))
+  ID_Continue: Unicode.Binary_Property.ID_Continue.union(Charset.fromChars('$_\u200C\u200D')),
 };
 
 export const IDRegex = new RegExp(
   '^' + IDCharset.ID_Start.toRegex().source + IDCharset.ID_Continue.toRegex().source + '*$',
-  'u'
+  'u',
 );
 
 export function asNode<T extends AST.NodeBase>(type?: T['type']) {
-  return function(v: Omit<T, 'range' | 'type'>, ctx: {range: TokenRange}): T {
+  return function (v: Omit<T, 'range' | 'type'>, ctx: {range: TokenRange}): T {
     let a = v as any;
     if (!a.type && type) {
       a.type = type;
@@ -177,7 +177,7 @@ export abstract class BaseGrammar {
   Dot = P.exact('.').map((_, ctx) => asNode<AST.DotNode>('Dot')({}, ctx));
 
   BaseCharClassEscape = P.re(/\\([dDsSwW])/).map((m, ctx) =>
-    asNode<AST.CharClassEscapeNode>('CharClassEscape')({charClass: charClassEscapeTypeMap[m[1]]}, ctx)
+    asNode<AST.CharClassEscapeNode>('CharClassEscape')({charClass: charClassEscapeTypeMap[m[1]]}, ctx),
   );
 
   RawUnicodeCharClassEscape = P.re(/\\(p)\{([^{}=]*)(?:=([^{}]*))?\}/i);
@@ -232,7 +232,7 @@ export abstract class BaseGrammar {
         return {value: asNode<AST.CharNode>('Char')({value: String.fromCharCode(parseInt(m[1], 8))}, ctx)};
       }
       return {error: {type: 'OctEscape', range: ctx.range}};
-    })
+    }),
   );
 
   /*
@@ -270,12 +270,12 @@ export abstract class BaseGrammar {
 
   RegExpIdentifierStart = P.alts(
     this.ID_Start,
-    this.RegExpUnicodeEscapeSequence.mapE(checkIDEscape(IDCharset.ID_Start))
+    this.RegExpUnicodeEscapeSequence.mapE(checkIDEscape(IDCharset.ID_Start)),
   );
 
   RegExpIdentifierContinue = P.alts(
     this.ID_Continue,
-    this.RegExpUnicodeEscapeSequence.mapE(checkIDEscape(IDCharset.ID_Continue))
+    this.RegExpUnicodeEscapeSequence.mapE(checkIDEscape(IDCharset.ID_Continue)),
   );
 
   RegExpIdentifierName = P.seqs(this.RegExpIdentifierStart, this.RegExpIdentifierContinue.repeat()).map(a => {
@@ -299,7 +299,7 @@ export abstract class BaseGrammar {
       } else {
         return {value: c};
       }
-    })
+    }),
   ).map((c, ctx) => asNode<AST.CharNode>('Char')({value: c}, ctx));
 
   CharClassEscape = P.alts(this.BaseCharClassEscape, this.UnicodeCharClassEscape);
@@ -340,8 +340,8 @@ export abstract class BaseGrammar {
             return {
               error: {
                 type: 'CharClassEscapeInRange',
-                range: (begin.type === 'CharClassEscape' ? begin : end).range
-              }
+                range: (begin.type === 'CharClassEscape' ? begin : end).range,
+              },
             };
           }
 
@@ -353,8 +353,8 @@ export abstract class BaseGrammar {
             return {
               error: {
                 type: 'CharRangeOutOfOrder',
-                range: [begin.range[0], end.range[1]]
-              }
+                range: [begin.range[0], end.range[1]],
+              },
             };
           }
 
@@ -387,7 +387,7 @@ export abstract class BaseGrammar {
         s = specialChars[s] || s;
         return {value: {type: 'Char', value: s, range: range} as AST.CharNode, consumed};
       }),
-      P.alts(this.CharClassEscape, this.CharEscape)
+      P.alts(this.CharClassEscape, this.CharEscape),
     );
   }
 
@@ -423,7 +423,7 @@ export abstract class BaseGrammar {
       let [look, negative] = groupAssertionTypeMap[prefix.slice(1)];
       ctx.state.openPairs.push(ctx.range[0]);
       return {assertion: <Omit<AST.GroupAssertionNode, 'body'>>{look, negative}};
-    }
+    },
   );
 
   openParen = P.exact('(').stateF((st, ctx) => {
@@ -451,7 +451,7 @@ export abstract class BaseGrammar {
       } else {
         return asNode<AST.ListNode>('List')(
           {body: nodes},
-          {range: [nodes[0].range[0], nodes[nodes.length - 1].range[1]]}
+          {range: [nodes[0].range[0], nodes[nodes.length - 1].range[1]]},
         );
       }
     }
@@ -460,7 +460,7 @@ export abstract class BaseGrammar {
       this.Term()
         .many()
         .map((terms, ctx) => (terms.length ? toNodeList(terms) : AST.makeEmptyNode(ctx.range[0]))),
-      P.seqs(P.exact('|'), this.Disjunction()).opt()
+      P.seqs(P.exact('|'), this.Disjunction()).opt(),
     ).map((v, ctx) => {
       let [left, remain] = v;
       let right = remain ? remain[1] : undefined;
@@ -558,7 +558,7 @@ export function check(re: AST.Node): K.Maybe<RegexError> {
       Repeat(n) {
         _check(n.body);
       },
-      defaults(n) {}
+      defaults(n) {},
     });
   }
 }
@@ -596,7 +596,7 @@ export function toSource(node: AST.Node): string {
         '\f': '\\f',
         '\n': '\\n',
         '\r': '\\r',
-        '\t': '\\t'
+        '\t': '\\t',
       };
       const re = /[\b\f\n\r\t\u2028\u2029\uD800-\uDBFF\uDC00-\uDFFF]/g;
       s = s.replace(re, c => {
@@ -609,18 +609,15 @@ export function toSource(node: AST.Node): string {
 
     function fixStickyDecimalEscape(a: string[]): string {
       return a
-        .reduce(
-          (prev, cur) => {
-            let end = prev[prev.length - 1];
-            if (end && /\\\d*$/.test(end) && /^\d/.test(cur)) {
-              prev.push(K.Char.hexEscape(cur[0]), cur.slice(1));
-            } else {
-              prev.push(cur);
-            }
-            return prev;
-          },
-          [] as string[]
-        )
+        .reduce((prev, cur) => {
+          let end = prev[prev.length - 1];
+          if (end && /\\\d*$/.test(end) && /^\d/.test(cur)) {
+            prev.push(K.Char.hexEscape(cur[0]), cur.slice(1));
+          } else {
+            prev.push(cur);
+          }
+          return prev;
+        }, [] as string[])
         .join('');
     }
 
@@ -674,7 +671,7 @@ export function toSource(node: AST.Node): string {
       },
       Disjunction(n) {
         return n.body.join('|');
-      }
+      },
     });
   });
 }

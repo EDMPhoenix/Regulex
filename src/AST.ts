@@ -26,7 +26,7 @@ export interface BackrefNode extends NodeBase {
 
 export type UnicodeCharClass = {name: string; invert: boolean; value?: string};
 export const baseCharClassTuple = ['Digit', 'NonDigit', 'Word', 'NonWord', 'Space', 'NonSpace'] as const;
-export type BaseCharClass = typeof baseCharClassTuple[number];
+export type BaseCharClass = (typeof baseCharClassTuple)[number];
 
 export interface CharClassEscapeNode extends NodeBase {
   type: 'CharClassEscape';
@@ -72,7 +72,7 @@ export interface DisjunctionNode extends NodeBase {
 }
 
 export type GroupBehavior =
-| {type: 'Capturing'; index: number; name?: string}
+  | {type: 'Capturing'; index: number; name?: string}
   | {type: 'NonCapturing'}
   | {type: 'Atomic'}
   | {type: 'EnableDup'};
@@ -91,7 +91,7 @@ export interface GroupAssertionNode extends NodeBase {
 }
 
 export const baseAssertionTypeTuple = ['WordBoundary', 'NonWordBoundary', 'Begin', 'End'] as const;
-export type BaseAssertionType = typeof baseAssertionTypeTuple[number];
+export type BaseAssertionType = (typeof baseAssertionTypeTuple)[number];
 export interface BaseAssertionNode extends NodeBase {
   type: 'BaseAssertion';
   kind: BaseAssertionType;
@@ -177,7 +177,7 @@ export class RegexFlags {
     ['s', 'dotAll'],
     ['m', 'multiline'],
     ['y', 'sticky'],
-    ['x', 'extended']
+    ['x', 'extended'],
   ]);
 
   static readonly invFlagMap = K.invertMap(RegexFlags.flagMap);
@@ -224,10 +224,10 @@ const _BranchNodeTypeTuple = [
   'List',
   'Disjunction',
   'CharClass',
-  'CharRange'
+  'CharRange',
 ] as const;
 
-export const BranchNodeTypeTuple: BranchNode['type'] extends typeof _BranchNodeTypeTuple[number]
+export const BranchNodeTypeTuple: BranchNode['type'] extends (typeof _BranchNodeTypeTuple)[number]
   ? typeof _BranchNodeTypeTuple
   : never = _BranchNodeTypeTuple; // The type is only used to assert the tuple included all BranchNode types.
 
@@ -264,7 +264,7 @@ export type Visitor<N extends INode = Node> =
   | (UT.DeepPartial<FullVisitor<N>> & {defaults: VisitorCase<N, N['type']>});
 
 export type FullMatchClause<A, B, N extends INode = Node> = {
-  [K in N['type']]: ((node: A extends N ? PickByNodeType<N, K> : SubstIn<PickByNodeType<N, K>, N, A>) => B);
+  [K in N['type']]: (node: A extends N ? PickByNodeType<N, K> : SubstIn<PickByNodeType<N, K>, N, A>) => B;
 };
 
 export type MatchClause<A, B, N extends INode = Node> =
@@ -316,7 +316,10 @@ Bottom up transform node, aka Catamorphism.
 */
 export function bottomUp<T, N extends Node = Node>(n: N, f: (n: NodeF<T, N>, parent?: N) => T): T {
   function cata(n: N, parent?: N): T {
-    return f(fmap<T, N>(n, a => cata(a, n)), parent);
+    return f(
+      fmap<T, N>(n, a => cata(a, n)),
+      parent,
+    );
   }
   return cata(n);
 }
@@ -361,7 +364,7 @@ export function indent(n: Node, indent: number): Node {
     defaults(node) {
       node.range[0] += indent;
       node.range[1] += indent;
-    }
+    },
   });
   return n;
 }
@@ -388,7 +391,7 @@ export function getGroupsInfo(re: Node, _renumber = false): RegexGroupsInfo {
         }
       }
     },
-    defaults() {}
+    defaults() {},
   });
 
   return groups;
